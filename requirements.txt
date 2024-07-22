@@ -1,0 +1,12 @@
+#python == 3.10
+community == 1.0.0b1
+googletrans == 4.0.0-rc1
+langdetect == 1.0.9
+networkx == 3.3
+pandas == 2.2.2
+python-louvain == 0.16
+pyvis == 0.3.2
+rapidfuzz == 3.9.3
+regex == 2024.4.28
+setuptools == 70.3.0
+spacy == 3.7.2

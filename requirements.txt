@@ -11,4 +11,6 @@ regex == 2024.4.28
 setuptools == 70.3.0
 spacy == 3.7.2
 
-numpy == 1.23.2
+thinc == 8.2.5
+numpy == 1.23.5
+cython

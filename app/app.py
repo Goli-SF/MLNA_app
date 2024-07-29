@@ -15,64 +15,71 @@ from pyvis.network import Network
 
 
 # user_input:
-def get_entities ():
+def get_entities():
     """
     Prompts the user to enter the entities they are looking for in the input texts. The entities stem form spaCy.
     """
-    options= {'PERSON': 'People, including fictional.',
-              'NORP': 'Nationalities or religious or political groups.',
-              'FAC':'Buildings, airports, highways, bridges, etc.',
-              'ORG': 'Companies, agencies, institutions, etc.',
-              'GPE': 'Countries, cities, states.',
-              'LOC': 'Non-GPE locations, mountain ranges, bodies of water.',
-              'PRODUCT': 'Objects, vehicles, foods, etc. (Not services.)',
-              'EVENT': 'Named hurricanes, battles, wars, sports events, etc.',
-              'WORK_OF_ART': 'Titles of books, songs, etc.',
-              'LAW': 'Named documents made into laws.',
-              'LANGUAGE': 'Any named language.',
-              'DATE': 'Absolute or relative dates or periods.',
-              'MONEY': 'Monetary values, including unit.'}
-    entity_tags = []
-    print("Enter the entities you are looking for. Enter 'done' when finished.")
-    print()
-    for key in options.keys():
-        print (f"{key} : {options[key]}")
-    print()
-    while True:
-        choice = input("Enter your choice: ").upper()
-        if choice == 'DONE':
-            break
-        elif choice in options:
-            entity_tags.append(choice)
-        else:
-            print("Invalid option. Please select a valid option or enter 'done' to exit.")
+    options= ['People, including fictional.',
+              'Nationalities or religious or political groups.',
+              'Buildings, airports, highways, bridges, etc.',
+              'Companies, agencies, institutions, etc.',
+              'Countries, cities, states.',
+              'Non-GPE locations, mountain ranges, bodies of water.',
+              'Objects, vehicles, foods, etc. (Not services.)',
+              'Named hurricanes, battles, wars, sports events, etc.',
+              'Titles of books, songs, etc.',
+              'Named documents made into laws.',
+              'Any named language.',
+              'Absolute or relative dates or periods.',
+              'Monetary values, including unit.']
 
+    options_dict= {'People, including fictional.': 'PERSON',
+              'Nationalities or religious or political groups.': 'NORP',
+              'Buildings, airports, highways, bridges, etc.': 'FAC',
+              'Companies, agencies, institutions, etc.': 'ORG',
+              'Countries, cities, states.': 'GPE',
+              'Non-GPE locations, mountain ranges, bodies of water.': 'LOC',
+              'Objects, vehicles, foods, etc. (Not services.)': 'PRODUCT',
+              'Named hurricanes, battles, wars, sports events, etc.': 'EVENT',
+              'Titles of books, songs, etc.': 'WORK_OF_ART',
+              'Named documents made into laws.': 'LAW',
+              'Any named language.': 'LANGUAGE',
+              'Absolute or relative dates or periods.': 'DATE',
+              'Monetary values, including unit.': 'MONEY'}
+
+
+    entities = st.multiselect("**Which entities are you looking for in the texts?**", options)
+    entity_tags= []
+    for entity in entities:
+        entity_tags.append(options_dict[entity])
     return entity_tags
 
 
-def select_nodes (text_df, entity_tags, user_dict=None, user_ents=None):
+def get_user_ents():
+    """
+    Prompts the user to enter the words they are looking for in the input texts, other than the entities.
+    """
+    all_ents= st.text_input("**Enter as many words as you wish to include in the network analysis, except the selected entities. Separate the words with a comma. Press Enter when finished.**")
+    user_ents= all_ents.split(',')
+    return user_ents
+
+
+def select_nodes (text_df, entity_tags, user_ents=None, user_dict=None):
     """
     Prompts the user to enter the names of the nodes they want to extract from the network data. These nodes can be
     used to visualize a network consisting only of them or to filter relevant texts from the text_df based on the
     nodes/entities present in the texts. The node names entered by the user should match the entities recognized by
     the extract_entities function from the preproc module.
     """
-    network_df= get_network_data(text_df, entity_tags, user_dict, user_ents)
-    select_nodes=[]
-    print ("Enter the names of as many nodes as you wish. Enter 'done' to exit.")
-    print()
-    while True:
-        node= input("Enter the name of a node: ")
-        if node.lower()=='done':
-            break
-        elif node.lower() not in list(map(lambda x: x.lower(), network_df['source'])) or\
+    network_df= get_network_data(text_df, entity_tags, user_ents, user_dict)
+    all_nodes= st.text_input ("**Enter the nodes that you want to see in the network graph or in the filtered DataFrame. Separate the words with a comma. Press Enter when finished.**")
+    selected_nodes= all_nodes.split(',')
+    for node in selected_nodes:
+        if node.lower() not in list(map(lambda x: x.lower(), network_df['source'])) and\
         node.lower() not in list(map(lambda x: x.lower(), network_df['target'])):
-            print()
-            print ("Invalid input. Please enter a valid node or enter 'done' to exti.")
-        else:
-            select_nodes.append(node)
+            selected_nodes.remove(node)
 
-    return select_nodes
+    return selected_nodes
 
 
 def user_dict (text_df, entity_tags, user_ents=None, dict_path=None, threshold=80):
@@ -111,7 +118,7 @@ def user_dict (text_df, entity_tags, user_ents=None, dict_path=None, threshold=8
                 user_dict[variation]= constant
 
     elif fuzz_prompt.lower()=='y':
-        similar_groups= group_similar_ents (text_df, entity_tags, user_dict, user_ents, threshold)
+        similar_groups= group_similar_ents (text_df, entity_tags, user_ents, user_dict, threshold)
         for group in similar_groups:
             print()
             print("The following words seem to refer to the same entity:")
@@ -504,22 +511,54 @@ def main():
     st.write ('### The MultiLingual Network Analysis package')
     st.link_button ('Visit the MLNA repo on Github.', url='https://github.com/Goli-SF/MLNA')
 
-    # Prompt the user to upload a file
-    uploaded_file= st.file_uploader("Upload a pickled data frame containing your texts:", type="pickle")
+    # Prompt the user to upload a file:
+    uploaded_file= st.file_uploader("**Upload a pickled DataFrame containing your texts (up to 200 MB):**", type="pickle")
     if uploaded_file is not None:
-        # Read the file into a DataFrame
+        # Read the file into a DataFrame:
         text_df= pd.read_pickle(uploaded_file)
-        # Display the DataFrame
-        st.write("Uploaded data frame:")
+        # Display the DataFrame:
+        st.write("**Here's the uploaded DataFrame:**")
         st.dataframe(text_df)
+
+
+    st.write('#### user dictionary')
+    st.markdown("""---""")
+    # Add a user dictionary:
+    ###
+
+    col1, col2, col3= st.columns(3)
+    with col1:
+        st.write('#### predefined spaCy entities')
+        st.markdown("""---""")
+        # Prompt the user to enter the entities they are looking for:
+        entity_tags = get_entities()
+        if len(entity_tags)>0:
+            st.write ("**Here's your entitiy list:**", entity_tags)
+
+    with col2:
+        st.write('#### user-defined entities')
+        st.markdown("""---""")
+        # Prompt the user to enter self-defined entities:
+        user_ents= get_user_ents()
+        if len(user_ents)>0:
+            st.write ("**Here's your list of words:**", user_ents)
+
+    with col3:
+        st.write('#### list of selected nodes')
+        st.markdown("""---""")
+        # Prompt the user to enter self-defined nodes:
+        selected_nodes= select_nodes (text_df, entity_tags=entity_tags, user_ents=user_ents, user_dict=None)
+        if len(selected_nodes)>0:
+            st.write ("**Here's your list of selected nodes:**", selected_nodes)
+
 
         # html_content = visualize_network (text_df, ['PERSON'], user_ents=None, user_dict=None, core=True, select_nodes=None, sources=None,\
         # title='network_visualization', figsize=(1000, 700), bgcolor='black', font_color='white')
         # st.components.v1.html(html_content, height=500, width=700)
 
-        content= detect_community (text_df, ['PERSON', 'GPE'], user_ents=None, user_dict=None, title='community_detection',\
-        figsize=(800, 600), bgcolor='black', font_color='white')
-        st.components.v1.html(content, height=500, width=700)
+        # content= detect_community (text_df, ['PERSON', 'GPE'], user_ents=None, user_dict=None, title='community_detection',\
+        # figsize=(800, 600), bgcolor='black', font_color='white')
+        # st.components.v1.html(content, height=500, width=700)
 
 if __name__ == "__main__":
     main()

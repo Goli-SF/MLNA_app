@@ -82,7 +82,7 @@ def select_nodes (text_df, entity_tags, user_ents=None, user_dict=None):
     return selected_nodes
 
 
-def user_dict (text_df, entity_tags, user_ents=None, threshold=80):
+def user_dict (text_df, entity_tags, user_ents=None):
     """
     This function allows users to set a preferred spelling for proper names and convert all variations to this standard
     version. The dictionary is saved to the code's path, enabling it to be reloaded and updated at different stages of
@@ -90,6 +90,32 @@ def user_dict (text_df, entity_tags, user_ents=None, threshold=80):
     pickled dictionary into the dict_path argument. Additionally, users can adjust the threshold value to fine-tune
     the fuzzy matching.
     """
+
+    def manual_or_fuzzy (argument):
+        method_answer= st.radio (f"How would you like to {argument} the dictionary?", ["Do it manually", "View suggestions"])
+        if method_answer== "Do it manually":
+            constant= st.text_input ("Enter the standard spelling of an entity:")
+            all_variations= st.text_input (f"Enter all vatiations of '{constant}' that exist among the entities. Separate the words with a comma. Press Enter when finished.")
+            variations= all_variations.split(',')
+            for variation in variations:
+                user_dict[variation]= constant
+        elif method_answer== "View suggestions":
+            threshold= st.slider ("Choose the threshold for fuzzy matching:", 0, 100)
+            similar_groups= group_similar_ents (text_df, entity_tags, user_ents, user_dict, threshold)
+            for group in similar_groups:
+                print("The following words seem to refer to the same entity:")
+                for ent in group:
+                    print (ent)
+                    enter_fuzz_ent= st.radio ("How do you wish to proceed?", ["Enter unified spelling for these words", "Skip to the next set", "Exit"])
+                    if enter_fuzz_ent== "Exit":
+                        break
+                    elif enter_fuzz_ent== "Enter unified spelling for these words":
+                        unified_entity= st.text_input ("Enter a unified spelling for all of the above words:")
+                        for ent in group:
+                            user_dict[ent]= unified_entity
+        return user_dict
+
+
     dict_answer= st.radio ("**Do you already have a dictionary saved locally on your computer?**", ["Yes", "No"])
 
     if dict_answer== "Yes":
@@ -99,74 +125,29 @@ def user_dict (text_df, entity_tags, user_ents=None, threshold=80):
         dict_items= list(user_dict.items())
         dict_df= pd.DataFrame(dict_items, columns=['key', 'value'])
         st.dataframe(dict_df)
-
-        expand_answer= st.radio ("**Do you wish to expand this dictionary?**", ["Yes", "No"])
+        expand_answer= st.radio ("**Do you wish to expand the dictionary?**", ["Yes", "No"])
         if expand_answer== "Yes":
-            expand_answer= st.radio ("How would you like to expand the dictionary?", ["Expand manually", "View suggestions"])
-            if expand_answer== "Expand manually":
-                ####
-
-
-
-
-
-
-
+            user_dict= manual_or_fuzzy('expand')
+            with open(dict_path, 'wb') as f:
+                pickle.dump(user_dict, f)
+                st.write("**Here's the updated dictionary:**")
+                dict_items= list(user_dict.items())
+                dict_df= pd.DataFrame(dict_items, columns=['key', 'value'])
+                st.dataframe(dict_df)
 
     if dict_answer== "No":
-        pass
+        create_answer= st.radio ("**Do you wish to create a dictionary?**", ["Yes", "No"])
+        if create_answer== "Yes":
+            user_dict={}
+            user_dict= manual_or_fuzzy("create")
 
+            file_name= 'user_dict.pickle'
+            # get path
+            with open(file_name, 'wb') as f:
+                pickle.dump(user_dict, f)
 
-
-
-
-    else:
-        user_dict={}
-
-    fuzz_prompt= input("Do you wish to see all similar entities and define a constant spelling for them? Enter 'y' for Yes and 'n' for No: ")
-    print()
-
-    if fuzz_prompt.lower()=='n':
-        constant= input("Enter the standard spelling of an entity: ")
-        print()
-        print(f"Enter all vatiations of '{constant}' that exist among the entities. Enter 'done' to exit. Enter 'next' to set another standard spelling for another entity.")
-        print()
-        while True:
-            variation= input(f"Enter a varying spelling of '{constant}': ")
-            if variation.lower()== 'done':
-                break
-            elif variation.lower()== 'next':
-                print()
-                constant= input("Enter the standard spelling of an entity: ")
-                print()
-                print(f"Enter all vatiations of '{constant}' that exist among the entities. Enter 'done' to exit. Enter 'next' to set another standard spelling for another entity.")
-                print()
-            else:
-                user_dict[variation]= constant
-
-    elif fuzz_prompt.lower()=='y':
-        similar_groups= group_similar_ents (text_df, entity_tags, user_ents, user_dict, threshold)
-        for group in similar_groups:
-            print()
-            print("The following words seem to refer to the same entity:")
-            print()
-            for ent in group:
-                print (ent)
-            print()
-            unified_entity= input("Enter a standard spelling for all of the above entities. Enter 's' to skip to the next set. Enter 'done' to exit.")
-            if unified_entity.lower()=='done':
-                break
-            elif unified_entity.lower()!='s':
-                for ent in group:
-                    user_dict[ent]= unified_entity
-
-    if dict_path:
-        with open(dict_path, 'wb') as f:
-            pickle.dump(user_dict, f)
-    else:
-        file_name= 'user_dict.pickle'
-        with open(file_name, 'wb') as f:
-            pickle.dump(user_dict, f)
+        elif create_answer== "No":
+            pass
 
     return user_dict
 
@@ -548,12 +529,6 @@ def main():
         st.dataframe(text_df)
 
 
-    st.write('#### User Dictionary')
-    st.markdown("""---""")
-
-    ####
-
-
 
 
     col1, col2= st.columns(2)
@@ -572,6 +547,75 @@ def main():
         user_ents= get_user_ents()
         if len(user_ents)>0:
             st.write ("**Here's your list of words:**", user_ents)
+
+
+    st.write('#### User Dictionary')
+    st.markdown("""---""")
+
+    #####
+
+    def manual_or_fuzzy (argument):
+        method_answer= st.radio (f"How would you like to {argument} the dictionary?", ["Do it manually", "View suggestions"])
+        if method_answer== "Do it manually":
+            constant= st.text_input ("Enter the standard spelling of an entity:")
+            all_variations= st.text_input (f"Enter all vatiations of '{constant}' that exist among the entities. Separate the words with a comma. Press Enter when finished.")
+            variations= all_variations.split(',')
+            for variation in variations:
+                user_dict[variation]= constant
+        elif method_answer== "View suggestions":
+            threshold= st.slider ("Choose the threshold for fuzzy matching:", 0, 100)
+            similar_groups= group_similar_ents (text_df, entity_tags=entity_tags, user_ents=user_ents, user_dict=user_dict, threshold=threshold)
+            for group in similar_groups:
+                print("The following words seem to refer to the same entity:")
+                for ent in group:
+                    print (ent)
+                    enter_fuzz_ent= st.radio ("How do you wish to proceed?", ["Enter unified spelling for these words", "Skip to the next set", "Exit"])
+                    if enter_fuzz_ent== "Exit":
+                        break
+                    elif enter_fuzz_ent== "Enter unified spelling for these words":
+                        unified_entity= st.text_input ("Enter a unified spelling for all of the above words:")
+                        for ent in group:
+                            user_dict[ent]= unified_entity
+        return user_dict
+
+
+    dict_answer= st.radio ("**Do you already have a dictionary saved locally on your computer?**", ["Yes", "No"])
+
+    if dict_answer== "Yes":
+        dict_path= st.file_uploader("**Enter the path to the locally saved dictionary:**", type="pickle")
+        user_dict = pickle.load(dict_path)
+        st.write("**Here's the uploaded dictionary:**")
+        dict_items= list(user_dict.items())
+        dict_df= pd.DataFrame(dict_items, columns=['key', 'value'])
+        st.dataframe(dict_df)
+        expand_answer= st.radio ("**Do you wish to expand the dictionary?**", ["Yes", "No"])
+        if expand_answer== "Yes":
+            user_dict= manual_or_fuzzy('expand')
+            with open(dict_path, 'wb') as f:
+                pickle.dump(user_dict, f)
+                st.write("**Here's the updated dictionary:**")
+                dict_items= list(user_dict.items())
+                dict_df= pd.DataFrame(dict_items, columns=['key', 'value'])
+                st.dataframe(dict_df)
+
+    if dict_answer== "No":
+        create_answer= st.radio ("**Do you wish to create a dictionary?**", ["Yes", "No"])
+        if create_answer== "Yes":
+            user_dict={}
+            user_dict= manual_or_fuzzy("create")
+
+            file_name= 'user_dict.pickle'
+            # get path
+            with open(file_name, 'wb') as f:
+                pickle.dump(user_dict, f)
+
+        elif create_answer== "No":
+            pass
+
+    #####
+
+
+
 
     # with col3:
     #     st.write('#### list of selected nodes')

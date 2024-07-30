@@ -59,7 +59,7 @@ def get_user_ents():
     """
     Prompts the user to enter the words they are looking for in the input texts, other than the entities.
     """
-    all_ents= st.text_input("**Enter as many words as you wish to include in the network analysis, except the selected entities. Separate the words with a comma. Press Enter when finished.**")
+    all_ents= st.text_input("**Enter as many words as you wish to include in the network analysis, that do not fit under the entity categories. Separate the words with a comma. Press Enter when finished.**")
     user_ents= all_ents.split(',')
     return user_ents
 
@@ -82,7 +82,7 @@ def select_nodes (text_df, entity_tags, user_ents=None, user_dict=None):
     return selected_nodes
 
 
-def user_dict (text_df, entity_tags, user_ents=None, dict_path=None, threshold=80):
+def user_dict (text_df, entity_tags, user_ents=None, threshold=80):
     """
     This function allows users to set a preferred spelling for proper names and convert all variations to this standard
     version. The dictionary is saved to the code's path, enabling it to be reloaded and updated at different stages of
@@ -90,9 +90,36 @@ def user_dict (text_df, entity_tags, user_ents=None, dict_path=None, threshold=8
     pickled dictionary into the dict_path argument. Additionally, users can adjust the threshold value to fine-tune
     the fuzzy matching.
     """
-    if dict_path:
-        with open(dict_path, 'rb') as f:
-            user_dict = pickle.load(f)
+    dict_answer= st.radio ("**Do you already have a dictionary saved locally on your computer?**", ["Yes", "No"])
+
+    if dict_answer== "Yes":
+        dict_path= st.file_uploader("**Enter the path to the locally saved dictionary:**", type="pickle")
+        user_dict = pickle.load(dict_path)
+        st.write("**Here's the uploaded dictionary:**")
+        dict_items= list(user_dict.items())
+        dict_df= pd.DataFrame(dict_items, columns=['key', 'value'])
+        st.dataframe(dict_df)
+
+        expand_answer= st.radio ("**Do you wish to expand this dictionary?**", ["Yes", "No"])
+        if expand_answer== "Yes":
+            expand_answer= st.radio ("How would you like to expand the dictionary?", ["Expand manually", "View suggestions"])
+            if expand_answer== "Expand manually":
+                ####
+
+
+
+
+
+
+
+
+    if dict_answer== "No":
+        pass
+
+
+
+
+
     else:
         user_dict={}
 
@@ -386,7 +413,7 @@ def get_network_data (text_df, entity_tags, user_ents=None, user_dict=None):
 
 
 def detect_community (text_df, entity_tags, user_ents=None, user_dict=None, title='community_detection',\
-    figsize=(1000, 700), bgcolor='black', font_color='white'):
+    figsize=(700, 500), bgcolor='black', font_color='white'):
     """
     Detects communities in the given texts within the text_df. It takes a list of entity tags, a string as title and a
     tuple for the figsize in the format (width, height). The user can also change the default background and font colors.
@@ -421,7 +448,7 @@ def detect_community (text_df, entity_tags, user_ents=None, user_dict=None, titl
 
 
 def visualize_network (text_df, entity_tags, user_ents=None, user_dict=None, core=False, select_nodes=None, sources=None,\
-    title='network_visualization', figsize=(1000, 700), bgcolor='black', font_color='white'):
+    title='network_visualization', figsize=(700, 500), bgcolor='black', font_color='white'):
     """
     Extracts network data from text_df. The *args and **kwargs are as followes:
 
@@ -509,7 +536,7 @@ def main():
 
     st.title ('MLNA')
     st.write ('### The MultiLingual Network Analysis package')
-    st.link_button ('Visit the MLNA repo on Github.', url='https://github.com/Goli-SF/MLNA')
+    st.link_button ('Visit the MLNA repo on GitHub.', url='https://github.com/Goli-SF/MLNA')
 
     # Prompt the user to upload a file:
     uploaded_file= st.file_uploader("**Upload a pickled DataFrame containing your texts (up to 200 MB):**", type="pickle")
@@ -521,14 +548,17 @@ def main():
         st.dataframe(text_df)
 
 
-    st.write('#### user dictionary')
+    st.write('#### User Dictionary')
     st.markdown("""---""")
-    # Add a user dictionary:
-    ###
 
-    col1, col2, col3= st.columns(3)
+    ####
+
+
+
+
+    col1, col2= st.columns(2)
     with col1:
-        st.write('#### predefined spaCy entities')
+        st.write('#### Predefined Entities')
         st.markdown("""---""")
         # Prompt the user to enter the entities they are looking for:
         entity_tags = get_entities()
@@ -536,25 +566,26 @@ def main():
             st.write ("**Here's your entitiy list:**", entity_tags)
 
     with col2:
-        st.write('#### user-defined entities')
+        st.write('#### User-Defined Entities')
         st.markdown("""---""")
         # Prompt the user to enter self-defined entities:
         user_ents= get_user_ents()
         if len(user_ents)>0:
             st.write ("**Here's your list of words:**", user_ents)
 
-    with col3:
-        st.write('#### list of selected nodes')
-        st.markdown("""---""")
-        # Prompt the user to enter self-defined nodes:
-        selected_nodes= select_nodes (text_df, entity_tags=entity_tags, user_ents=user_ents, user_dict=None)
-        if len(selected_nodes)>0:
-            st.write ("**Here's your list of selected nodes:**", selected_nodes)
+    # with col3:
+    #     st.write('#### list of selected nodes')
+    #     st.markdown("""---""")
+    #     # Prompt the user to enter self-defined nodes:
+    #     selected_nodes= select_nodes (text_df, entity_tags=entity_tags, user_ents=user_ents, user_dict=None)
+    #     if len(selected_nodes)>0:
+    #         st.write ("**Here's your list of selected nodes:**", selected_nodes)
 
-
-        # html_content = visualize_network (text_df, ['PERSON'], user_ents=None, user_dict=None, core=True, select_nodes=None, sources=None,\
-        # title='network_visualization', figsize=(1000, 700), bgcolor='black', font_color='white')
-        # st.components.v1.html(html_content, height=500, width=700)
+    # st.write('#### network graph')
+    # st.markdown("""---""")
+    # html_content = visualize_network (text_df, entity_tags=entity_tags, user_ents=user_ents, user_dict=None, core=True, select_nodes=None, sources=None,\
+    # title='network_visualization', figsize=(700, 500), bgcolor='black', font_color='white')
+    # st.components.v1.html(html_content, width=700, height=500)
 
         # content= detect_community (text_df, ['PERSON', 'GPE'], user_ents=None, user_dict=None, title='community_detection',\
         # figsize=(800, 600), bgcolor='black', font_color='white')

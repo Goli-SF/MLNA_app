@@ -554,8 +554,8 @@ def main():
 
     #####
 
-    def manual_or_fuzzy (argument):
-        method_answer= st.radio (f"How would you like to {argument} the dictionary?", ["Do it manually", "View suggestions"])
+    def manual_or_fuzzy (argument, user_dict):
+        method_answer= st.radio (f"How would you like to {argument} the dictionary?", ["Do it manually", "View suggestions"], key="fuzz_or_not")
         if method_answer== "Do it manually":
             constant= st.text_input ("Enter the standard spelling of an entity:")
             all_variations= st.text_input (f"Enter all vatiations of '{constant}' that exist among the entities. Separate the words with a comma. Press Enter when finished.")
@@ -565,11 +565,13 @@ def main():
         elif method_answer== "View suggestions":
             threshold= st.slider ("Choose the threshold for fuzzy matching:", 0, 100)
             similar_groups= group_similar_ents (text_df, entity_tags=entity_tags, user_ents=user_ents, user_dict=user_dict, threshold=threshold)
+            counter=0
             for group in similar_groups:
                 print("The following words seem to refer to the same entity:")
                 for ent in group:
                     print (ent)
-                    enter_fuzz_ent= st.radio ("How do you wish to proceed?", ["Enter unified spelling for these words", "Skip to the next set", "Exit"])
+                    enter_fuzz_ent= st.radio ("How do you wish to proceed?", ["Enter unified spelling for these words", "Skip to the next set", "Exit"], key=f"fuzz_{counter}")
+                    counter+=1
                     if enter_fuzz_ent== "Exit":
                         break
                     elif enter_fuzz_ent== "Enter unified spelling for these words":
@@ -579,7 +581,7 @@ def main():
         return user_dict
 
 
-    dict_answer= st.radio ("**Do you already have a dictionary saved locally on your computer?**", ["Yes", "No"])
+    dict_answer= st.radio ("**Do you already have a dictionary saved locally on your computer?**", ["Yes", "No"], key="dict_yes_no")
 
     if dict_answer== "Yes":
         dict_path= st.file_uploader("**Enter the path to the locally saved dictionary:**", type="pickle")
@@ -588,9 +590,9 @@ def main():
         dict_items= list(user_dict.items())
         dict_df= pd.DataFrame(dict_items, columns=['key', 'value'])
         st.dataframe(dict_df)
-        expand_answer= st.radio ("**Do you wish to expand the dictionary?**", ["Yes", "No"])
+        expand_answer= st.radio ("**Do you wish to expand the dictionary?**", ["Yes", "No"], key="expand_dict")
         if expand_answer== "Yes":
-            user_dict= manual_or_fuzzy('expand')
+            user_dict= manual_or_fuzzy('expand', user_dict)
             with open(dict_path, 'wb') as f:
                 pickle.dump(user_dict, f)
                 st.write("**Here's the updated dictionary:**")
@@ -599,10 +601,10 @@ def main():
                 st.dataframe(dict_df)
 
     if dict_answer== "No":
-        create_answer= st.radio ("**Do you wish to create a dictionary?**", ["Yes", "No"])
+        create_answer= st.radio ("**Do you wish to create a dictionary?**", ["Yes", "No"], key="create_dict")
         if create_answer== "Yes":
             user_dict={}
-            user_dict= manual_or_fuzzy("create")
+            user_dict= manual_or_fuzzy("create", user_dict)
 
             file_name= 'user_dict.pickle'
             # get path
@@ -625,11 +627,11 @@ def main():
     #     if len(selected_nodes)>0:
     #         st.write ("**Here's your list of selected nodes:**", selected_nodes)
 
-    # st.write('#### network graph')
-    # st.markdown("""---""")
-    # html_content = visualize_network (text_df, entity_tags=entity_tags, user_ents=user_ents, user_dict=None, core=True, select_nodes=None, sources=None,\
-    # title='network_visualization', figsize=(700, 500), bgcolor='black', font_color='white')
-    # st.components.v1.html(html_content, width=700, height=500)
+    st.write('#### Network Graph')
+    st.markdown("""---""")
+    html_content = visualize_network (text_df, entity_tags=entity_tags, user_ents=user_ents, user_dict=user_dict, core=False, select_nodes=None, sources=None,\
+    title='network_visualization', figsize=(700, 500), bgcolor='black', font_color='white')
+    st.components.v1.html(html_content, width=700, height=500)
 
         # content= detect_community (text_df, ['PERSON', 'GPE'], user_ents=None, user_dict=None, title='community_detection',\
         # figsize=(800, 600), bgcolor='black', font_color='white')

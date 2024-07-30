@@ -91,7 +91,6 @@ def create_user_dict (text_df, entity_tags, user_ents=None):
     pickled dictionary into the dict_path argument. Additionally, users can adjust the threshold value to fine-tune
     the fuzzy matching.
     """
-
     def manual_or_fuzzy (argument, user_dict):
         method_answer= st.radio (f"**How would you like to {argument} the dictionary?**", ["Do it manually", "View suggestions"], key="fuzz_or_not")
         if method_answer== "Do it manually":
@@ -101,25 +100,28 @@ def create_user_dict (text_df, entity_tags, user_ents=None):
             for variation in variations:
                 user_dict[variation]= constant
         elif method_answer== "View suggestions":
-            threshold= st.slider ("**Choose the threshold for fuzzy matching:**", 0, 100, 80)
+            threshold= st.slider ("**Choose the threshold for fuzzy matching:**", 0, 100, 80, step=2)
             similar_groups= group_similar_ents (text_df, entity_tags=entity_tags, user_ents=user_ents, user_dict=user_dict, threshold=threshold)
             counter=0
+
             for group in similar_groups:
+                counter+=1
                 st.write("**The following words seem to refer to the same entity:**")
                 for ent in group:
                     st.write(ent)
-                enter_fuzz_ent= st.radio ("How do you wish to proceed?", ["Enter unified spelling for these words", "Skip to the next set", "Exit"], key=f"fuzz_{counter}")
-                counter+=1
+                enter_fuzz_ent= st.radio ("*How do you wish to proceed?*", ["Enter unified spelling for these words", "Skip", "Exit"], key=f"fuzz_{counter}")
                 if enter_fuzz_ent== "Exit":
                     break
                 elif enter_fuzz_ent== "Enter unified spelling for these words":
                     unified_entity= st.text_input ("Enter a unified spelling for all of the above words:", key=f"unified_entity_{counter}")
                     for ent in group:
                         user_dict[ent]= unified_entity
+                else:
+                    pass
 
-        filtered_dict = {key: value for key, value in user_dict.items() if key != value}
-
+        filtered_dict = {key: value for key, value in user_dict.items() if key!=value and value!=''}
         return filtered_dict
+
 
     dict_answer= st.radio ("**Do you already have a dictionary saved locally on your computer?**", ["Yes", "No"], key="dict_yes_no")
 
@@ -144,14 +146,14 @@ def create_user_dict (text_df, entity_tags, user_ents=None):
             pickle.dump(user_dict, pickle_buffer)
             pickle_buffer.seek(0)  # Move to the beginning of the BytesIO buffer
             st.download_button(label="Download the updated dictionary", data=pickle_buffer, file_name="user_dict.pickle", mime="application/octet-stream")
+
         elif expand_answer== "No":
             pass
 
-    elif dict_answer== "No":
+    else:
         create_answer= st.radio ("**Do you wish to create a dictionary?**", ["Yes", "No"], key="create_dict")
         if create_answer== "Yes":
-            user_dict={}
-            user_dict= manual_or_fuzzy("create", user_dict)
+            user_dict= manual_or_fuzzy("create", {})
 
             st.write("**Here's the updated dictionary:**")
             dict_items= list(user_dict.items())
@@ -163,44 +165,12 @@ def create_user_dict (text_df, entity_tags, user_ents=None):
             pickle.dump(user_dict, pickle_buffer)
             pickle_buffer.seek(0)  # Move to the beginning of the BytesIO buffer
             st.download_button(label="Download the updated dictionary", data=pickle_buffer, file_name="user_dict.pickle", mime="application/octet-stream")
-        elif create_answer== "No":
-            pass
 
-
-    dict_answer= st.radio ("**Do you already have a dictionary saved locally on your computer?**", ["Yes", "No"])
-
-    if dict_answer== "Yes":
-        dict_path= st.file_uploader("**Enter the path to the locally saved dictionary:**", type="pickle")
-        user_dict = pickle.load(dict_path)
-        st.write("**Here's the uploaded dictionary:**")
-        dict_items= list(user_dict.items())
-        dict_df= pd.DataFrame(dict_items, columns=['key', 'value'])
-        st.dataframe(dict_df)
-        expand_answer= st.radio ("**Do you wish to expand the dictionary?**", ["Yes", "No"])
-        if expand_answer== "Yes":
-            user_dict= manual_or_fuzzy('expand')
-            with open(dict_path, 'wb') as f:
-                pickle.dump(user_dict, f)
-                st.write("**Here's the updated dictionary:**")
-                dict_items= list(user_dict.items())
-                dict_df= pd.DataFrame(dict_items, columns=['key', 'value'])
-                st.dataframe(dict_df)
-
-    if dict_answer== "No":
-        create_answer= st.radio ("**Do you wish to create a dictionary?**", ["Yes", "No"])
-        if create_answer== "Yes":
-            user_dict={}
-            user_dict= manual_or_fuzzy("create")
-
-            file_name= 'user_dict.pickle'
-            # get path
-            with open(file_name, 'wb') as f:
-                pickle.dump(user_dict, f)
-
-        elif create_answer== "No":
-            pass
+        else:
+            user_dict=None
 
     return user_dict
+
 
 
 
@@ -579,9 +549,6 @@ def main():
         st.write("**Here's the uploaded DataFrame:**")
         st.dataframe(text_df)
 
-
-
-
     col1, col2= st.columns(2)
     with col1:
         st.write('#### Predefined Entities')
@@ -602,12 +569,7 @@ def main():
 
     st.write('#### User Dictionary')
     st.markdown("""---""")
-
-    #####
-
-    user_dict= create_user_dict (text_df=text_df, entity_tags=entity_tags, user_ents=user_ents)
-
-    #####
+    my_dict= create_user_dict (text_df=text_df, entity_tags=entity_tags, user_ents=user_ents)
 
 
 
@@ -620,15 +582,16 @@ def main():
     #     if len(selected_nodes)>0:
     #         st.write ("**Here's your list of selected nodes:**", selected_nodes)
 
-    # st.write('#### Network Graph')
-    # st.markdown("""---""")
-    # html_content = visualize_network (text_df, entity_tags=entity_tags, user_ents=user_ents, user_dict=user_dict, core=False, select_nodes=None, sources=None,\
-    # title='network_visualization', figsize=(700, 500), bgcolor='black', font_color='white')
-    # st.components.v1.html(html_content, width=700, height=500)
+    st.write('#### Network Graph')
+    st.markdown("""---""")
+    html_content = visualize_network (text_df, entity_tags=entity_tags, user_ents=user_ents, user_dict=my_dict, core=False, select_nodes=None, sources=None,\
+    title='network_visualization', figsize=(1000, 700), bgcolor='black', font_color='white')
+    st.components.v1.html(html_content, width=700, height=500)
+    st.download_button(label="Download the network graph", data=html_content, file_name="network_visualization.html", mime="application/octet-stream")
 
-        # content= detect_community (text_df, ['PERSON', 'GPE'], user_ents=None, user_dict=None, title='community_detection',\
-        # figsize=(800, 600), bgcolor='black', font_color='white')
-        # st.components.v1.html(content, height=500, width=700)
+    # content= detect_community (text_df, ['PERSON', 'GPE'], user_ents=None, user_dict=None, title='community_detection',\
+    # figsize=(800, 600), bgcolor='black', font_color='white')
+    # st.components.v1.html(content, height=500, width=700)
 
 if __name__ == "__main__":
     main()

@@ -14,18 +14,23 @@ from pyvis.network import Network
 import io
 
 #new code
-import subprocess
-import sys
-
-def install_spacy_model():
+def ensure_spacy_model():
     try:
+        # Attempt to load the model
         spacy.load("en_core_web_md")
     except OSError:
         print("Model not found. Installing...")
-        subprocess.check_call([sys.executable, "-m", "spacy", "download", "en_core_web_md"])
+        result = subprocess.run([sys.executable, "-m", "spacy", "download", "en_core_web_md"], capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"Error installing model: {result.stderr}")
+            raise RuntimeError("Failed to install Spacy model")
+        else:
+            print("Model installed successfully")
+            # Reload the model after installation
+            spacy.load("en_core_web_md")
 
 # Ensure the Spacy model is installed
-install_spacy_model()
+ensure_spacy_model()
 
 # Load the model
 nlp = spacy.load("en_core_web_md")

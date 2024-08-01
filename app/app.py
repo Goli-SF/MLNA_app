@@ -62,7 +62,7 @@ def get_user_ents():
     Prompts the user to enter the words they are looking for in the input texts, other than the entities.
     """
     all_ents= st.text_input("**Enter as many words as you wish to include in the network analysis, that do not fit under the entity categories. Separate the words with a comma. Press Enter when finished.**")
-    user_ents= all_ents.split(',')
+    user_ents= [x.strip() for x in all_ents.split(',')]
     #st.write("here are your nodes:", user_ents)
     return user_ents
 
@@ -76,7 +76,7 @@ def select_nodes (text_df, entity_tags, user_ents=None, user_dict=None):
     """
     network_df= get_network_data(text_df, entity_tags, user_ents, user_dict)
     all_nodes= st.text_input ("**Enter the nodes that you want to see in the network graph or in the filtered DataFrame. Separate the words with a comma. Press Enter when finished.**")
-    selected_nodes= all_nodes.split(',')
+    selected_nodes= [x.strip() for x in all_nodes.split(',')]
     for node in selected_nodes:
         if node.lower() not in list(map(lambda x: x.lower(), network_df['source'])) and\
         node.lower() not in list(map(lambda x: x.lower(), network_df['target'])):
@@ -98,7 +98,7 @@ def create_user_dict (text_df, entity_tags, user_ents=None):
         if method_answer== "Do it manually":
             constant= st.text_input ("Enter the standard spelling of an entity:")
             all_variations= st.text_input (f"Enter all vatiations of '{constant}' that exist among the entities. Separate the words with a comma. Press Enter when finished.")
-            variations= all_variations.split(',')
+            variations= [x.strip() for x in all_variations.split(',')]
             for variation in variations:
                 user_dict[variation]= constant
         elif method_answer== "View suggestions":
@@ -133,7 +133,7 @@ def create_user_dict (text_df, entity_tags, user_ents=None):
         st.write("**Here's the uploaded dictionary:**")
         dict_items= list(user_dict.items())
         dict_df= pd.DataFrame(dict_items, columns=['key', 'value'])
-        st.dataframe(dict_df)
+        st.dataframe(dict_df, width=700)
         expand_answer= st.radio ("**Do you wish to expand the dictionary?**", ["Yes", "No"], key="expand_dict")
         if expand_answer== "Yes":
             user_dict= manual_or_fuzzy('expand', user_dict)
@@ -141,7 +141,7 @@ def create_user_dict (text_df, entity_tags, user_ents=None):
             st.write("**Here's the updated dictionary:**")
             dict_items= list(user_dict.items())
             dict_df= pd.DataFrame(dict_items, columns=['key', 'value'])
-            st.dataframe(dict_df)
+            st.dataframe(dict_df, width=700)
 
             # Pickle the dictionary to an in-memory binary stream
             pickle_buffer = io.BytesIO()
@@ -160,7 +160,7 @@ def create_user_dict (text_df, entity_tags, user_ents=None):
             st.write("**Here's the updated dictionary:**")
             dict_items= list(user_dict.items())
             dict_df= pd.DataFrame(dict_items, columns=['key', 'value'])
-            st.dataframe(dict_df)
+            st.dataframe(dict_df, width=700)
 
             # Pickle the dictionary to an in-memory binary stream
             pickle_buffer = io.BytesIO()
@@ -300,10 +300,10 @@ def extract_entities (text, text_id, entity_tags, user_ents=None, user_dict=None
                     source_index=i
                     break
             for word in user_ents:
-                word=word.lower()
-                if word in funny_sent_words:
+                #word=word.lower()
+                if word.lower() in funny_sent_words:
                     # word_index = index of each single word provided by the user within the original sentence:
-                    word_index=funny_sent_words.index(word)
+                    word_index=funny_sent_words.index(word.lower())
                     if word_index <= source_index:
                         sent_entities.insert(0, word)
                     else:
@@ -491,8 +491,10 @@ def visualize_network (text_df, entity_tags, user_ents=None, user_dict=None, cor
 
     if core:
         net.from_nx(nx.k_core(G))
+        #net.save_graph(f'{title}.html')
     else:
         net.from_nx(G)
+        #net.save_graph(f'{title}.html')
 
     html_content= net.generate_html()
 
@@ -546,10 +548,11 @@ def main():
         st.write("**Here's the uploaded DataFrame:**")
         st.dataframe(text_df)
 
+    st.markdown("""---""")
     col1, col2= st.columns(2)
     with col1:
         st.write('#### Predefined Entities')
-        st.markdown("""---""")
+        #st.markdown("""---""")
         st.write('')
         st.write('')
         st.write('')
@@ -559,20 +562,22 @@ def main():
         #     st.write ("**Here's your entitiy list:**", entity_tags)
     with col2:
         st.write('#### User-Defined Entities')
-        st.markdown("""---""")
+        #st.markdown("""---""")
         user_ents= get_user_ents()
         # if len(user_ents)>0:
         #     st.write ("**Here's your list of words:**", user_ents)
 
-    st.write('### User Dictionary')
     st.markdown("""---""")
+    st.write('### User Dictionary')
+    #st.markdown("""---""")
     dict_on= st.toggle("Create or upload a user dictionary")
     if dict_on:
         my_dict= create_user_dict (text_df=text_df, entity_tags=entity_tags, user_ents=user_ents)
 
 
-    st.write('### Network and Community Graphs')
     st.markdown("""---""")
+    st.write('### Network and Community Graphs')
+    #st.markdown("""---""")
 
     st.write('**Network Parameter Controls**')
 
@@ -585,41 +590,42 @@ def main():
     select_nodes_on= st.toggle("Include only selected nodes in the graph")
     if select_nodes_on:
         select_nodes_all= st.text_input("Enter the names of the nodes that you wish to be included in the network graph. Separate the words with a comma. Press Enter when finished.")
-        select_nodes_list= select_nodes_all.split(',')
+        select_nodes_list= [x.strip() for x in select_nodes_all.split(',')]
     else:
         select_nodes_list=None
 
-    source_on= st.toggle("Create network graph for selected texts")
+    source_on= st.toggle("Include only selected texts in the graph")
     if source_on:
         source_list_all= st.text_input("Enter the ids of the texts that you wish to be included in the network graph. Separate the text_ids with a comma. Press Enter when finished.")
-        source_list= source_list_all.split(',')
+        source_list= [x.strip() for x in source_list_all.split(',')]
+
     else:
         source_list= None
 
 
-    st.write('#### Network graph')
-    st.markdown("""---""")
+    st.write('#### Network Graph')
     network_on= st.toggle("Create network graph")
     if network_on:
-        html_content= visualize_network (text_df, entity_tags=entity_tags, user_ents=user_ents, user_dict=my_dict,\
-            core=core_value, select_nodes=select_nodes_list, sources=source_list,\
-        title='network_visualization', figsize=(1000, 700), bgcolor='black', font_color='white')
+        html_content= visualize_network (text_df=text_df, entity_tags=entity_tags, user_ents=user_ents, user_dict=my_dict,\
+            core=core_value, select_nodes=select_nodes_list, sources=source_list, title='network_visualization', \
+                figsize=(1000, 700), bgcolor='black', font_color='white')
         st.components.v1.html(html_content, width=700, height=500)
-        st.download_button(label="Download the network graph", data=html_content, \
+        st.download_button(label="Download network graph", data=html_content, \
             file_name="network_visualization.html", mime="application/octet-stream")
 
 
-    st.write('#### Community graph')
-    st.markdown("""---""")
+    st.write('#### Community Graph')
     community_on= st.toggle("Create community graph")
     if community_on:
-        content= detect_community (text_df, entity_tags=entity_tags, user_ents=user_ents, user_dict=my_dict, title='community_graph',\
-        figsize=(1000, 700), bgcolor='black', font_color='white')
+        content= detect_community (text_df=text_df, entity_tags=entity_tags, user_ents=user_ents, user_dict=my_dict, \
+            title='community_graph',figsize=(1000, 700), bgcolor='black', font_color='white')
         st.components.v1.html(content, width=700, height=500)
-        st.download_button(label="Download the commuity graph", data=html_content, \
+        st.download_button(label="Download commuity graph", data=html_content, \
             file_name="community_graph.html", mime="application/octet-stream")
 
 
+    st.markdown("""---""")
+    st.write('### Filter Text Data')
 
 
     # st.write('#### list of selected nodes')

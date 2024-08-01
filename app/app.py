@@ -13,7 +13,7 @@ import community.community_louvain as community_louvain
 from pyvis.network import Network
 import io
 
-
+nlp = spacy.load("en_core_web_md")
 
 # user_input:
 def get_entities():

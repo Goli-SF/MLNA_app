@@ -15,4 +15,4 @@ thinc == 8.2.5
 numpy == 1.23.5
 cython == 0.29.32
 
-en_core_web_md @ en_core_web_md-3.7.1-py3-none-any.whl
+#en_core_web_md @ en_core_web_md-3.7.1-py3-none-any.whl

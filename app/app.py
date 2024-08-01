@@ -13,15 +13,6 @@ import community.community_louvain as community_louvain
 from pyvis.network import Network
 import io
 
-# import subprocess
-# # Download and install the Spacy model if it’s not already installed
-# def install_spacy_model():
-#     try:
-#         spacy.load("en_core_web_md")
-#     except OSError:
-#         subprocess.check_call(["python", "-m", "spacy", "download", "en_core_web_md"])
-# install_spacy_model()
-# # Load the Spacy model
 nlp = spacy.load("en_core_web_md")
 
 # user_input:

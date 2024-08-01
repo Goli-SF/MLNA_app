@@ -13,7 +13,24 @@ import community.community_louvain as community_louvain
 from pyvis.network import Network
 import io
 
+#new code
+import subprocess
+import sys
+
+def install_spacy_model():
+    try:
+        spacy.load("en_core_web_md")
+    except OSError:
+        print("Model not found. Installing...")
+        subprocess.check_call([sys.executable, "-m", "spacy", "download", "en_core_web_md"])
+
+# Ensure the Spacy model is installed
+install_spacy_model()
+
+# Load the model
 nlp = spacy.load("en_core_web_md")
+
+#new code
 
 # user_input:
 def get_entities():

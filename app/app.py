@@ -626,14 +626,32 @@ def main():
 
     st.markdown("""---""")
     st.write('### Filter Text Data')
+    filtered_data_on= st.toggle("Filter texts for close reading")
+    if filtered_data_on:
+        all_nodes= st.text_input("**Enter a list of nodes that should exist in the filtered texts. Separate the words with a comma. Press Enter when finished.**")
+        select_nodes= [x.strip() for x in all_nodes.split(',')]
+        if len(select_nodes)==2:
+            arg_answer= st.radio ("Do you want to view texts that include either of these nodes or texts that include the edge between them?", ["Either node", "The edge"], key="filter_data_key")
+            if arg_answer== "Either node":
+                my_operator= "OR"
+            elif arg_answer== "The edge":
+                my_operator= "AND"
+        else:
+            my_operator= "OR"
+
+        filtered_texts_df= filter_network_data (text_df=text_df, select_nodes=select_nodes, entity_tags=entity_tags , user_ents=user_ents,\
+            user_dict=my_dict, operator=my_operator)
 
 
-    # st.write('#### list of selected nodes')
-    # st.markdown("""---""")
-    # # Prompt the user to enter self-defined nodes:
-    # selected_nodes= select_nodes (text_df, entity_tags=entity_tags, user_ents=user_ents, user_dict=None)
-    # if len(selected_nodes)>0:
-    #     st.write ("**Here's your list of selected nodes:**", selected_nodes)
+        st.write("**Here's the list of filtered texts:**")
+        st.dataframe(filtered_texts_df)
+
+        # Pickle the dictionary to an in-memory binary stream
+        pickle_buffer_texts = io.BytesIO()
+        pickle.dump(filtered_texts_df, pickle_buffer_texts)
+        pickle_buffer_texts.seek(0)  # Move to the beginning of the BytesIO buffer
+        st.download_button(label="Download the list of filtered texts", data=pickle_buffer_texts, file_name="filtered_texts.pickle",\
+            mime="application/octet-stream")
 
 if __name__ == "__main__":
     main()
